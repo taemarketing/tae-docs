@@ -35,7 +35,7 @@ That's Phase 1 complete. On Phase 2, one bullet — *"Establish the security fou
 
 - The shared Supabase database had row-level security completely disabled on 12 tables (not scoped-too-loosely — actually off, full public read/write). That's fixed — RLS is on everywhere it should be, verified against Supabase's own linter.
 - Two admin database views and one admin function that bypassed access control entirely are locked down.
-- The single flat database namespace has started moving toward the `core` / `discovery` / `portal` structure this document's technical sections assume — two phases done (the tables exclusive to tae-discovery and to tae-portal), the harder shared "core" tables (companies, clients, sessions — the ones touching the actual client login system) deliberately deferred to a dedicated session rather than rushed.
+- The single flat database namespace finished moving to the `core` / `discovery` / `portal` structure this document's technical sections assume — all four phases done, including the highest-risk one: `companies`, `clients`, `partners`, `sessions`, and `discovery_links` (the tables touching the actual client login system) moved to `core` as one unit, verified against the real login query and both admin views before deploying. What's *not* done yet: each app still connects with credentials that can technically see every schema — the schemas exist and hold the right tables, but access isn't scoped by them yet. That's the natural next step toward this section's "scoped credentials" goal, not something ContextLayer work has touched directly.
 
 None of this is the MCP server itself — Phase 2's actual centerpiece, "build the MCP server, the central hub connecting Claude to all TAE systems," has not been started. But the ground it would stand on is measurably more solid than it was this morning.
 
@@ -520,7 +520,7 @@ The infrastructure being built right now is not separate from ContextLayer — i
 ### Phase 2 — Near Term
 - ⬜ Build the MCP server — the central hub connecting Claude to all TAE systems *(not started)*
 - ⬜ Stand up the retrieval store and prove retrieval quality on real client data *(not started)*
-- 🟡 Establish the security foundation — scoped credentials, secrets store, per-client isolation *(partial: Supabase RLS gaps closed, schema namespacing partially done — the harder shared "core" tables deliberately deferred; no MCP-level credential scoping exists yet since there's no MCP server yet)*
+- 🟡 Establish the security foundation — scoped credentials, secrets store, per-client isolation *(partial: Supabase RLS gaps closed, all four schema-namespacing phases complete including `core` — but apps still connect with unscoped credentials that can see every schema, and no MCP-level credential scoping exists yet since there's no MCP server yet)*
 - ⬜ Connect GitHub repos, Supabase, and Basecamp to the MCP server *(not started — no MCP server to connect to)*
 - ⬜ Add team members to GitHub org and Vercel for collaborative editing *(not started)*
 
