@@ -9,7 +9,19 @@ this repo is for things that describe the whole system.
   database, which tool owns what, security findings and fix status.
 - **TAE_Tools_Setup_Reference.md** — every TAE tool, what it does, how it
   deploys, where its data comes from.
+- **TAE_ContextLayer.md** — the full strategic vision for ContextLayer
+  (planned hosted MCP server), converted from the original PDF explainer.
+  Cross-tool by nature — it's the plan for something that will eventually
+  connect to everything TAE has.
+- **TAE_Discovery_System_Manual.md** — how to generate discovery links, what
+  each interview produces, and how to manage entries. Named for the
+  Discovery System but genuinely spans two tools — the interview engine
+  lives in tae-discovery, but Section 4 (managing entries, the link
+  generator) is entirely about the TAE Portal's admin UI. That's why it's
+  here rather than filed inside tae-discovery alone.
 
-Both are meant to stay current, not be one-time snapshots — update them
+All four are meant to stay current, not be one-time snapshots — update them
 directly rather than starting the investigation over next time something
-changes.
+changes. Each has a matching card in the TAE Toolbox (bottom of the TAE
+Dashboard admin page) linking straight to its file here on GitHub, so the
+card always shows whatever's actually committed.
