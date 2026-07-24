@@ -94,6 +94,10 @@ Was a one-off test of building a site from a PSD design with Claude Code — nev
 
 ---
 
+## Where this file itself lives
+
+This document and the Supabase Database Audit both live in their own small repo — `github.com/taemarketing/tae-docs` — rather than inside any single tool's repo, since both describe the whole system rather than one piece of it. Tool-specific docs (like TAE Discovery's own interview logic) live inside that tool's own repo instead, under a `docs/` folder.
+
 ## Keeping this current
 
-This is meant to stay accurate, not be a one-time snapshot. Worth re-checking after any deploy-setup change, a new tool gets added, or before a bigger reorganization — ask to have this file updated rather than starting the investigation over.
+This is meant to stay accurate, not be a one-time snapshot. Worth re-checking after any deploy-setup change, a new tool gets added, or before a bigger reorganization — edit the file directly in `tae-docs` and push, rather than starting the investigation over.
