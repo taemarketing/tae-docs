@@ -2,7 +2,7 @@
 
 # TAE Tools — Supabase Database Audit
 
-*CLI linked and cross-checked against the live database (project `zbwcyjhczzgowmjzgsim`, "TAE Tools", Postgres 17) via `supabase gen types` and `supabase db advisors` — Supabase's own security/performance linter. Everything below is confirmed against what's actually running, not inferred from files. Originally written July 23, 2026; updated same day after fixes landed.*
+*CLI linked and cross-checked against the live database (project `zbwcyjhczzgowmjzgsim`, "TAE Tools", Postgres 17) via `supabase gen types` and `supabase db advisors` — Supabase's own security/performance linter. Everything below is confirmed against what's actually running, not inferred from files. Originally written July 23, 2026; updated July 27, 2026 (tae-portal migration discipline now actually working — see finding 5 update).*
 
 ---
 
@@ -91,6 +91,12 @@ The practical read: even tae-discovery, the repo with real migration discipline,
 
 tae-portal still has no ongoing migration *discipline* — this is a snapshot, not a process. The next schema change to any of these 13 tables should get a new numbered migration file rather than another dashboard edit, or this gap reopens immediately.
 
+**Update, 2026-07-27 — the predicted gap reopened almost immediately, and the fix is now real.** A new client-facing feature (Dashboard Resources) added `'resources'` as a valid `client_features.feature_key` value in the TypeScript type, but the table's `check` constraint — which only exists in the database, not in any type — was never updated to match. Every attempt to enable it for a client failed silently at the DB layer while the UI's optimistic update briefly showed success. This is exactly the failure mode finding 5 predicted: a live constraint drifting ahead of what the app code assumes, caught only by testing the actual toggle, not by any type check.
+
+Fixed properly this time, not just patched: `supabase link`, then `supabase migration repair 001 002 003 004 --status applied --linked` (the four reconstruction-snapshot migrations existed as files but had no remote ledger entry — repair marks them applied without replaying them), then real numbered migrations pushed via `supabase db push`: `005_client_resources_files.sql`, `006_company_portal_active.sql`, `007_client_features_add_resources.sql` (the constraint fix itself). tae-portal's migration history is now genuinely tracked against the remote database for the first time — `supabase migration list` shows local/remote in sync — so the next schema change can go through the same `db push` flow instead of a dashboard edit that drifts again.
+
+**A second, more serious instance surfaced in the same session — the two new tables from migration 005 (`client_resources`, `client_files`) had no RLS at all.** `create table` was written with no `enable row level security` and no policy — the exact class of gap finding 1 fixed for twelve other tables, reintroduced by a brand-new migration the same day. Not inferred: confirmed live by probing with the actual anon key before touching anything — an unauthenticated `POST` to `client_resources` with a real `company_id` succeeded (`201`, row created and immediately visible), proving both read and write were fully open to anyone holding the public anon key. Probe row deleted immediately after confirming. **Fixed** via `008_client_resources_files_rls.sql` — RLS enabled on both tables with the same `using(true)` permissive policy every other `portal.*` table currently uses; re-checked against `supabase db advisors` afterward, zero findings for either table. Net effect: both tables now sit at the same permissive-but-present posture as their siblings (`partner_resources`/`partner_files`), not fully open and not yet tightened — same caveat as everything else in this tier.
+
 ### 6. fri-marketing-redesign's key in public HTML — ✅ Fixed (separately, before this list)
 
 The F.R.I. marketing site was moved to its own Vercel project and rebuilt with no Supabase connection at all — verified directly against the live deployment. The `fri_comments` table itself was dropped from the database, not just disconnected. Resolved before the RLS work above even started.
@@ -136,6 +142,7 @@ erDiagram
         text company_name
         text relationship_stage
         bigint basecamp_project_id
+        boolean portal_active "added 2026-07-27, mirrors partners.active"
     }
     CLIENTS {
         uuid id PK
@@ -167,7 +174,7 @@ erDiagram
 
 ## Full table inventory
 
-30 tables total, all in the single `public` schema. (`fri_comments` — 31st, listed in the original version of this audit — was dropped along with the fri-marketing anon-key fix, finding 6.)
+32 tables total. (`fri_comments` — listed in the original version of this audit — was dropped along with the fri-marketing anon-key fix, finding 6. `client_resources` and `client_files` added 2026-07-27, mirroring `partner_resources`/`partner_files` to give clients the same "From TAE" / internal-files capability partners already had.)
 
 | Table | Owner (by evidence) | RLS status | Purpose |
 |---|---|---|---|
@@ -197,6 +204,8 @@ erDiagram
 | `client_features` | tae-portal | read: public, write: `service_role` only | Per-client feature flags. |
 | `partner_resources` | tae-portal | on, permissive | Partner-facing resource library. |
 | `partner_files` | tae-portal | on, permissive | Files on partner resources. |
+| `client_resources` | tae-portal | on, permissive | Client-facing resource library ("From TAE"), added 2026-07-27. Mirrors `partner_resources`. |
+| `client_files` | tae-portal | on, permissive | TAE-only internal files per client, added 2026-07-27. Mirrors `partner_files`. |
 | `notification_queue` | tae-portal | on, permissive | Outbound notification jobs. |
 | `notification_subscriptions` | tae-portal | on, permissive | Notification subscriptions. |
 | `feed_views` | tae-portal | on, permissive | Read/seen tracking, minimal shape (`item_key`, `viewed_at`), no FK. |
@@ -243,7 +252,7 @@ This changes the calculus, not just adds to it. [ContextLayer](../TAE_ContextLay
 
 1. ~~Fix the ERROR-level items~~ — ✅ done (findings 1–3).
 2. ~~Resolve the two-auth-system question~~ — ✅ done, turned out to be a non-issue (finding 4).
-3. ~~Backfill migrations~~ — ✅ done (finding 5) — both repos' migration files now match live state. tae-portal still needs ongoing discipline (new migration per future change), not just this one snapshot.
+3. ~~Backfill migrations~~ — ✅ done (finding 5) — both repos' migration files now match live state. **Update 2026-07-27:** tae-portal's migration *discipline* is also now real, not just the snapshot — its remote migration history was repaired and three real migrations (005–007) have gone through `supabase db push` cleanly. tae-discovery still relies on manual dashboard edits backfilled after the fact; same recommendation applies there.
 4. ~~Schema namespacing~~ — ✅ done. All four phases complete; `core`/`discovery`/`portal` schemas live, code updated and verified in both repos.
 5. **Decide and document** — the ownership convention between tae-discovery and tae-portal. Not started.
 6. **Give each app a scoped Postgres role** — right now every app's credentials can technically see every schema; the schemas exist but access isn't segmented by them yet. Not started.

@@ -2,7 +2,7 @@
 
 # TAE Tools — Full Setup Reference
 
-*A plain-language map of every tool, where it lives, and how it stays updated — so we can organize, fix, or move things later without guessing or breaking what already works. Last updated July 23, 2026.*
+*A plain-language map of every tool, where it lives, and how it stays updated — so we can organize, fix, or move things later without guessing or breaking what already works. Last updated July 27, 2026.*
 
 ---
 
@@ -43,6 +43,7 @@ Every tool above is now on the same simple pattern — save a change, `git push`
 - **What it does:** The main portal your clients and partners log into — tickets, reports, published files, notifications.
 - **Updates:** Save a change, `git push`, Vercel deploys it automatically. This is the pattern every tool below should ideally match.
 - **Data:** Reads and writes the shared Supabase database — full detail in the [Supabase Database Audit](https://claude.ai/code/artifact/ad0fc3af-4fa3-40c3-926b-efdfe7de5f34).
+- **Database changes:** **New as of 2026-07-27** — the Supabase CLI is now linked to this project (`supabase link`), so schema changes go through `supabase/migrations/*.sql` + `supabase db push` instead of hand-editing the dashboard. See the Supabase audit doc's finding 5 for why that matters.
 
 ### TAE Discovery
 - **Folder:** `tae-discovery`
