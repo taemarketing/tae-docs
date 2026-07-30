@@ -84,15 +84,12 @@ Every tool above is now on the same simple pattern — save a change, `git push`
 
 ### TAE ContextLayer
 - **Folder:** `tae-contextlayer`
-- **What it does:** The hosted MCP server — the connector between Claude and everything TAE knows about a client. Full strategic brief in `TAE_ContextLayer.md` (this repo). As of 2026-07-30, exposes one tool, `get_client_context`, pulling a client's core record, latest Discovery intelligence, and Portal activity (tickets, reports) into one bundle.
+- **What it does:** The hosted MCP server — the connector between Claude and everything TAE knows about a client. Full strategic brief in `TAE_ContextLayer.md` (this repo). As of 2026-07-30, exposes three tools: `get_client_context` (pulls a client's core record, latest Discovery intelligence, and Portal activity into one bundle), `mark_as_client` (manually confirms a conversion), and `log_relationship_event` (logs the ongoing lifecycle — renewals, upsells, churn). A control panel for the last two lives in the TAE Dashboard at `/admin/contextlayer` — the "ContextLayer Console."
 - **Updates:** `github.com/taemarketing/tae-contextlayer` (private), git push → auto once the Vercel side is connected.
-- **Data:** Connects to the shared Supabase database with the **service-role key** — full access, by design, not scoped to one schema — because its job is cross-system analysis, not a narrow client silo. See the ContextLayer doc's July 30 status update for why.
-- **Vercel setup (not yet done):** the repo is pushed and ready. To connect it: in the Vercel dashboard, **Add New → Project → Import Git Repository**, select `taemarketing/tae-contextlayer`, same Vercel team as the other TAE tools. Before the first deploy, add these environment variables (from `tae-contextlayer/.env.local` locally, not committed to git):
-  - `SUPABASE_URL`
-  - `SUPABASE_SERVICE_ROLE_KEY`
-  - `MCP_BEARER_TOKEN`
-
-  Once deployed, the MCP endpoint is `https://<vercel-project-name>.vercel.app/api/mcp`.
+- **Data:** Connects to the shared Supabase database with the **service-role key** — full access, by design, not scoped to one schema — because its job is cross-system analysis, not a narrow client silo. See the ContextLayer doc's July 30 status update for why. Owns its own `contextlayer` schema (`client_engagements`, `relationship_events`) via its own linked Supabase CLI project, same discipline as tae-portal's migrations.
+- **Two manual setup steps still open:**
+  1. **Vercel** — the repo is pushed and ready. To connect it: in the Vercel dashboard, **Add New → Project → Import Git Repository**, select `taemarketing/tae-contextlayer`, same Vercel team as the other TAE tools. Before the first deploy, add these environment variables (from `tae-contextlayer/.env.local` locally, not committed to git): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `MCP_BEARER_TOKEN`. Once deployed, the MCP endpoint is `https://<vercel-project-name>.vercel.app/api/mcp` — update tae-portal's `CONTEXTLAYER_MCP_URL` env var (both locally and once tae-portal itself is redeployed) to point at it instead of `localhost:3457`.
+  2. **Expose the `contextlayer` schema** — Supabase dashboard → Settings → API → Data API Settings → Exposed schemas. `core`/`discovery`/`portal`/`public` are already listed; add `contextlayer` to that same list (don't replace it). Until this is done, anything touching the new `client_engagements`/`relationship_events` tables (i.e. `log_relationship_event`, and the auto-logged `converted` event inside `mark_as_client`) will return `Invalid schema: contextlayer` — verified this is the only thing blocking it; the code itself is correct and tested.
 
 ### Apex site — removed
 Was a one-off test of building a site from a PSD design with Claude Code — never a real tool, never deployed anywhere. Confirmed no longer needed and moved to Trash on 2026-07-24 (not permanently deleted — still recoverable from Trash for a while if that changes). No longer listed above.
