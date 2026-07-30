@@ -2,7 +2,7 @@
 
 # TAE Tools — Full Setup Reference
 
-*A plain-language map of every tool, where it lives, and how it stays updated — so we can organize, fix, or move things later without guessing or breaking what already works. Last updated July 27, 2026.*
+*A plain-language map of every tool, where it lives, and how it stays updated — so we can organize, fix, or move things later without guessing or breaking what already works. Last updated July 30, 2026.*
 
 ---
 
@@ -30,7 +30,8 @@ A few words show up over and over below. Here's what they actually mean, once, s
 | F.R.I. Marketing site | Client-facing marketing site | Git push → auto | None |
 | TAE Dono Dashboard | Internal monthly reporting dashboard | Git push → auto | Basecamp + a few other services (not the shared database) |
 | ACS Dashboard | Client-specific dashboard | Git push → auto | Unconfirmed — not yet reviewed |
-| TAE Twin | ContextLayer groundwork | Git push → auto | Not yet reviewed in depth |
+| TAE Twin | Marketing site | Git push → auto | None |
+| TAE ContextLayer | Hosted MCP server for Claude | Git push → auto (Vercel import pending) | Shared database, full access |
 
 Every tool above is now on the same simple pattern — save a change, `git push`, it's live within a minute or two.
 
@@ -78,8 +79,20 @@ Every tool above is now on the same simple pattern — save a change, `git push`
 
 ### TAE Twin
 - **Folder:** `tae-twin`
-- **What it does:** Groundwork for [ContextLayer](../TAE_ContextLayer_v6.pdf) — not reviewed in depth for this document.
+- **What it does:** The public marketing site — plain HTML/CSS, not related to ContextLayer. (Corrected 2026-07-30: previously described here as "ContextLayer groundwork," which wasn't accurate — the actual ContextLayer server is its own separate repo, see below.)
 - **Worth flagging:** its GitHub home is a *different* organization (`The-Artist-Evolution`) than every other tool above (`taemarketing`). Confirmed 2026-07-24 this is fine as-is — not an accident worth fixing, just worth knowing before assuming "the GitHub org" is one single place.
+
+### TAE ContextLayer
+- **Folder:** `tae-contextlayer`
+- **What it does:** The hosted MCP server — the connector between Claude and everything TAE knows about a client. Full strategic brief in `TAE_ContextLayer.md` (this repo). As of 2026-07-30, exposes one tool, `get_client_context`, pulling a client's core record, latest Discovery intelligence, and Portal activity (tickets, reports) into one bundle.
+- **Updates:** `github.com/taemarketing/tae-contextlayer` (private), git push → auto once the Vercel side is connected.
+- **Data:** Connects to the shared Supabase database with the **service-role key** — full access, by design, not scoped to one schema — because its job is cross-system analysis, not a narrow client silo. See the ContextLayer doc's July 30 status update for why.
+- **Vercel setup (not yet done):** the repo is pushed and ready. To connect it: in the Vercel dashboard, **Add New → Project → Import Git Repository**, select `taemarketing/tae-contextlayer`, same Vercel team as the other TAE tools. Before the first deploy, add these environment variables (from `tae-contextlayer/.env.local` locally, not committed to git):
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `MCP_BEARER_TOKEN`
+
+  Once deployed, the MCP endpoint is `https://<vercel-project-name>.vercel.app/api/mcp`.
 
 ### Apex site — removed
 Was a one-off test of building a site from a PSD design with Claude Code — never a real tool, never deployed anywhere. Confirmed no longer needed and moved to Trash on 2026-07-24 (not permanently deleted — still recoverable from Trash for a while if that changes). No longer listed above.

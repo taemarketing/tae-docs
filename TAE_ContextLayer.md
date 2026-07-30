@@ -2,7 +2,7 @@
 
 # TAE ContextLayer
 
-*The Artist Evolution — updated July 24, 2026. Originally written June 2026; the strategic thesis below is unchanged, but Section 14 (Roadmap) has been updated to reflect real progress, and a status note has been added right after the executive summary.*
+*The Artist Evolution — updated July 30, 2026. Originally written June 2026; the strategic thesis below is unchanged, but Section 14 (Roadmap) has been updated to reflect real progress, and a status note has been added right after the executive summary.*
 
 ---
 
@@ -38,6 +38,20 @@ That's Phase 1 complete. On Phase 2, one bullet — *"Establish the security fou
 - The single flat database namespace finished moving to the `core` / `discovery` / `portal` structure this document's technical sections assume — all four phases done, including the highest-risk one: `companies`, `clients`, `partners`, `sessions`, and `discovery_links` (the tables touching the actual client login system) moved to `core` as one unit, verified against the real login query and both admin views before deploying. What's *not* done yet: each app still connects with credentials that can technically see every schema — the schemas exist and hold the right tables, but access isn't scoped by them yet. That's the natural next step toward this section's "scoped credentials" goal, not something ContextLayer work has touched directly.
 
 None of this is the MCP server itself — Phase 2's actual centerpiece, "build the MCP server, the central hub connecting Claude to all TAE systems," has not been started. But the ground it would stand on is measurably more solid than it was this morning.
+
+---
+
+## Status Update — July 30, 2026
+
+Phase 2's centerpiece is no longer unstarted: the MCP server itself now exists, deployed, with one real tool live.
+
+- ✅ **New repo, `taemarketing/tae-contextlayer`** — private, same GitHub account as six of TAE's seven other tools, same git-push-to-deploy pattern.
+- ✅ **First tool shipped: `get_client_context(company_name)`** — a hosted MCP tool (Next.js + `mcp-handler`, Streamable HTTP transport, stable v1 SDK line) that pulls a client's core company/contact record, latest Discovery interview intelligence (MIS scores, recommendations, insights), and recent Portal activity (tickets, reports) into one bundle in a single call — reaching across the `core`, `discovery`, and `portal` schemas live. Verified end-to-end against real data (tested against ACS's actual tickets and reports) using the official MCP Inspector.
+- ✅ **Access model resolved deliberately broad, not narrow.** The server connects with the Supabase service-role key — the same full-access trust tier `tae-portal` already uses — because ContextLayer's job is cross-system analysis and goal-driven action, not a siloed per-client view. This was a direct course-correction mid-build: an earlier draft of this work tried to scope the server down to a single new table out of over-cautious habit, and that was the wrong call for what ContextLayer is actually for.
+- 🟡 **Auth is a static bearer token for now** — good enough gating for a first version; full OAuth (per-client login) is real future work, not needed yet.
+- **One real finding surfaced along the way, worth flagging on its own:** none of today's Discovery sessions are actually linked to a `core.companies` row via `clients.company_id` — every discovery prospect's `client_id` currently points to a client record with `company_id` still null. So `get_client_context`'s discovery lookup is wired correctly but will return empty for every real company today, until that linkage is either backfilled or created going forward. Not a ContextLayer bug — a pre-existing gap in how Discovery and the Portal connect, worth a look separately.
+- ⬜ **Vercel deployment** — repo is pushed and ready to import; the actual Vercel project creation is a manual one-click step (see `tae-docs/TAE_Tools_Setup_Reference.md`'s `tae-contextlayer` entry for the exact steps and env vars).
+- ⬜ **Still not started, unchanged:** per-app Postgres-role isolation for the three existing apps (tracked separately in the Supabase audit), the structured "living brief" table (goals/audience/voice/positioning/history — today's tool reads existing operational data, not yet a dedicated encoded-strategy store), Discovery's System's "never recite known information" hard rule, and connecting GitHub/Basecamp/analytics as further tools.
 
 ---
 
@@ -528,10 +542,10 @@ The infrastructure being built right now is not separate from ContextLayer — i
 **Phase 1 is complete as of July 24, 2026.**
 
 ### Phase 2 — Near Term
-- ⬜ Build the MCP server — the central hub connecting Claude to all TAE systems *(not started)*
-- ⬜ Stand up the retrieval store and prove retrieval quality on real client data *(not started)*
-- 🟡 Establish the security foundation — scoped credentials, secrets store, per-client isolation *(partial: Supabase RLS gaps closed, all four schema-namespacing phases complete including `core` — but apps still connect with unscoped credentials that can see every schema, and no MCP-level credential scoping exists yet since there's no MCP server yet)*
-- ⬜ Connect GitHub repos, Supabase, and Basecamp to the MCP server *(not started — no MCP server to connect to)*
+- 🟡 Build the MCP server — the central hub connecting Claude to all TAE systems *(started — `taemarketing/tae-contextlayer` exists with one live tool, `get_client_context`, reaching across `core`/`discovery`/`portal`; deployed to GitHub, Vercel import still pending. More tools get added the same way going forward.)*
+- ⬜ Stand up the retrieval store and prove retrieval quality on real client data *(not started — today's first tool queries existing operational tables directly, not a retrieval/vector store)*
+- 🟡 Establish the security foundation — scoped credentials, secrets store, per-client isolation *(partial: Supabase RLS gaps closed, all four schema-namespacing phases complete including `core` — but apps still connect with unscoped credentials that can see every schema, and ContextLayer itself deliberately also uses full-access service-role credentials, by design, not narrowed — per-app Postgres-role isolation remains a distinct, separate, not-yet-started task)*
+- ⬜ Connect GitHub repos and Basecamp to the MCP server *(not started — Supabase is the first system connected; GitHub/Basecamp/analytics are the next tools to add)*
 - ⬜ Add team members to GitHub org and Vercel for collaborative editing *(not started)*
 
 ### Phase 3 — Medium Term
