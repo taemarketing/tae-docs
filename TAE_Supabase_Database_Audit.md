@@ -107,6 +107,15 @@ This is exactly the risk the "decide the ownership convention" recommendation (b
 
 The corrected total: **three repos** (`tae-portal`, `tae-discovery`, `tae-contextlayer`) share one Supabase project and one migration ledger, not two. Every recommendation below about ownership and collision risk applies across all three, not two — and the practical lesson sharpens further: before repairing *any* unexplained remote-only ledger entry, check whether a third (or fourth) repo you haven't opened yet might be the real owner, rather than assuming it's noise.
 
+**A fifth instance, 2026-08-01 — same collision, again, which settled the open recommendation below.** Renumber-and-placeholder had already happened three separate times (the updates above) and kept recurring, because the underlying scheme — three repos each counting `001, 002, 003...` independently against one shared ledger — guarantees a future collision every time any two of them reach the same number around the same time. That's not a bug to keep patching, it's the scheme itself being wrong for three independent counters against one shared resource. Fixed structurally instead of patched again: **each repo now owns a permanently reserved numeric block, so collision is no longer possible, not just less likely.**
+
+- `tae-portal` → `100–199` — new migrations named `100_tp_<description>.sql`, `101_tp_<description>.sql`, etc.
+- `tae-discovery` → `200–299` — `200_td_<description>.sql`, etc.
+- `tae-contextlayer` → `300–399` — `300_tcl_<description>.sql`, etc.
+- `400+` reserved for any future repo that ever links to this same project (`zbwcyjhczzgowmjzgsim`).
+
+Every block starts well clear of anything any repo has claimed so far (highest real numbers as of this fix: tae-portal 021, tae-discovery 010, tae-contextlayer 022) — no renumbering of existing files, no ledger repair, nothing retroactive. This applies going forward only: the next migration in any of the three repos should jump straight to its block's starting number rather than continuing the old shared 001-up sequence. The 2–3 letter tag in the filename (`tp`/`td`/`tcl`) is purely for human legibility when scanning a `migrations/` folder — the number itself is what makes collision structurally impossible, since no other repo will ever count into another's block. Pinned in each repo's own `AGENTS.md` so it loads into context automatically, including for background/subagent sessions.
+
 ### 6. fri-marketing-redesign's key in public HTML — ✅ Fixed (separately, before this list)
 
 The F.R.I. marketing site was moved to its own Vercel project and rebuilt with no Supabase connection at all — verified directly against the live deployment. The `fri_comments` table itself was dropped from the database, not just disconnected. Resolved before the RLS work above even started.
@@ -286,7 +295,7 @@ This changes the calculus, not just adds to it. [ContextLayer](../TAE_ContextLay
 2. ~~Resolve the two-auth-system question~~ — ✅ done, turned out to be a non-issue (finding 4).
 3. ~~Backfill migrations~~ — ✅ done (finding 5) — both repos' migration files now match live state. **Update 2026-07-27:** tae-portal's migration *discipline* is also now real, not just the snapshot — its remote migration history was repaired and three real migrations (005–007) have gone through `supabase db push` cleanly. tae-discovery still relies on manual dashboard edits backfilled after the fact; same recommendation applies there.
 4. ~~Schema namespacing~~ — ✅ done. All four phases complete; `core`/`discovery`/`portal` schemas live, code updated and verified in both repos.
-5. **Decide and document** — the ownership convention between tae-discovery, tae-portal, and tae-contextlayer (three repos sharing one project and one migration ledger, confirmed the hard way via finding 5's third and fourth updates). Not started.
+5. ~~Decide and document~~ — ✅ done, 2026-08-01. Reserved numeric blocks per repo (`tae-portal` 100–199, `tae-discovery` 200–299, `tae-contextlayer` 300–399) make future collisions structurally impossible rather than just less likely — see finding 5's fifth update, above.
 6. **Give each app a scoped Postgres role** — right now every app's credentials can technically see every schema; the schemas exist but access isn't segmented by them yet. Not started.
 7. ~~ContextLayer's schema~~ — ✅ done, 2026-07-30 (see the `contextlayer` schema section in the table inventory above). What's left in this line item now is just RLS tightening tied to the confirmed canonical auth system — not started.
 
