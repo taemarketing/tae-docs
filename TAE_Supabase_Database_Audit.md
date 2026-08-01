@@ -2,7 +2,7 @@
 
 # TAE Tools — Supabase Database Audit
 
-*CLI linked and cross-checked against the live database (project `zbwcyjhczzgowmjzgsim`, "TAE Tools", Postgres 17) via `supabase gen types` and `supabase db advisors` — Supabase's own security/performance linter. Everything below is confirmed against what's actually running, not inferred from files. Originally written July 23, 2026; updated July 27, 2026 (tae-portal migration discipline now actually working — see finding 5 update), then again July 27, 2026 (a real cross-repo migration-numbering collision surfaced and got fixed — see finding 5's second update).*
+*CLI linked and cross-checked against the live database (project `zbwcyjhczzgowmjzgsim`, "TAE Tools", Postgres 17) via `supabase gen types` and `supabase db advisors` — Supabase's own security/performance linter. Everything below is confirmed against what's actually running, not inferred from files. Originally written July 23, 2026; updated July 27, 2026 (tae-portal migration discipline now actually working — see finding 5 update), then again July 27, 2026 (a real cross-repo migration-numbering collision surfaced and got fixed — see finding 5's second update), then again July 31, 2026 (the collision turned out to involve a third repo, `tae-contextlayer`, not two — see finding 5's third and fourth updates and the new `contextlayer` schema section).*
 
 ---
 
@@ -10,7 +10,7 @@
 
 Everything flagged as ERROR-severity in the original version of this audit has been fixed and verified — RLS is on everywhere it should be, the backfill function is locked down, the two admin views no longer bypass security, and two mislabeled policies now actually do what their names claim. Every fix was checked against tae-portal's real source code first and confirmed live afterward (anon-key reads still return 200, anon-key writes that shouldn't be allowed now correctly return 401). The migration files also now match live reality in both repos — including tae-portal's very first migration file, ever. Details in each finding below, marked **✅ Fixed**.
 
-What's left is purely organizational: deciding an ownership convention between the two repos, and moving from one flat namespace to something built for "vast and complex" (the schema-namespacing recommendation) — see **What's left to do**.
+What's left is purely organizational: deciding an ownership convention between the repos sharing this project (three now, not two — see finding 5's fourth update), and moving from one flat namespace to something built for "vast and complex" (the schema-namespacing recommendation) — see **What's left to do**.
 
 ---
 
@@ -101,6 +101,12 @@ Fixed properly this time, not just patched: `supabase link`, then `supabase migr
 
 This is exactly the risk the "decide the ownership convention" recommendation (below, still unstarted) was written to prevent, now with a concrete failure mode attached: **any two repos sharing one Supabase project, numbering migrations independently, will eventually collide, and the collision fails silently rather than loudly.** Until an ownership convention exists, the safe habit is checking `supabase migration list` from whichever repo you're about to push from *before* trusting the push succeeded — and verifying the actual object exists afterward, not just reading "Finished supabase db push" as confirmation.
 
+**A fourth instance, discovered while fixing the third — turns out it's not two repos sharing this project, it's three, and the collision claimed a casualty on the way in.** `tae-contextlayer` also links to `zbwcyjhczzgowmjzgsim` and has its own `supabase/migrations` folder, independently numbered, which had *already* reached `014` by the time the third instance above was being diagnosed (`011_industry_aliases.sql` through `014_account_owners.sql` — real, applied, verified-live migrations per `TAE_ContextLayer.md`'s own status updates). While repairing tae-portal's view of the ledger for the third instance, `supabase migration repair --status reverted 011 012 013 014` was run **from tae-portal's directory**, against what looked like four orphaned, unexplained remote entries. They were not orphaned — they were tae-contextlayer's real work, and "reverted" is a shared-ledger-wide status change, not scoped to the repo running the command. This briefly left the shared ledger claiming four genuinely-applied, actively-used migrations were reverted, which they were not.
+
+**Caught and fixed before it caused any real harm** — by checking `tae-contextlayer`'s own migrations folder directly (its 001–009 are literal duplicates of tae-portal's own reconstruction migrations, confirming the two repos really do share history; 010–014 are its real, contextlayer-specific work) and re-running `supabase migration repair --status applied 011 012 013 014`, this time from `tae-contextlayer`'s own directory, restoring the ledger to reality. No data was touched — `repair` only ever edits the ledger's bookkeeping, never runs or reverts actual SQL — but the ledger briefly *said* something false about production migrations, which is exactly the kind of drift this document exists to catch. Verified after the fix: `tae-contextlayer`'s own `supabase migration list` shows all of 001–015 as `local` matching `remote`, no gaps, no phantom entries.
+
+The corrected total: **three repos** (`tae-portal`, `tae-discovery`, `tae-contextlayer`) share one Supabase project and one migration ledger, not two. Every recommendation below about ownership and collision risk applies across all three, not two — and the practical lesson sharpens further: before repairing *any* unexplained remote-only ledger entry, check whether a third (or fourth) repo you haven't opened yet might be the real owner, rather than assuming it's noise.
+
 ### 6. fri-marketing-redesign's key in public HTML — ✅ Fixed (separately, before this list)
 
 The F.R.I. marketing site was moved to its own Vercel project and rebuilt with no Supabase connection at all — verified directly against the live deployment. The `fri_comments` table itself was dropped from the database, not just disconnected. Resolved before the RLS work above even started.
@@ -178,7 +184,7 @@ erDiagram
 
 ## Full table inventory
 
-34 tables total. (`fri_comments` — listed in the original version of this audit — was dropped along with the fri-marketing anon-key fix, finding 6. `client_resources` and `client_files` added 2026-07-27, mirroring `partner_resources`/`partner_files`. `cl_tasks` and `cl_task_runs` added 2026-07-27, the ContextLayer cadence-task cost tracker — see finding 5's third update for the migration-numbering collision that delayed them.)
+39 tables total across four app-owned groups plus the two intelligence-only schemas already covered above. (`fri_comments` — listed in the original version of this audit — was dropped along with the fri-marketing anon-key fix, finding 6. `client_resources` and `client_files` added 2026-07-27, mirroring `partner_resources`/`partner_files`. The `contextlayer` schema — 7 tables, `tae-contextlayer`'s own — is new to this table since the last update; see its own section directly below.)
 
 | Table | Owner (by evidence) | RLS status | Purpose |
 |---|---|---|---|
@@ -210,12 +216,26 @@ erDiagram
 | `partner_files` | tae-portal | on, permissive | Files on partner resources. |
 | `client_resources` | tae-portal | on, permissive | Client-facing resource library ("From TAE"), added 2026-07-27. Mirrors `partner_resources`. |
 | `client_files` | tae-portal | on, permissive | TAE-only internal files per client, added 2026-07-27. Mirrors `partner_files`. |
-| `cl_tasks` | tae-portal | on, permissive | ContextLayer cadence task catalog (monthly/quarterly/yearly), added 2026-07-27. Cost estimate range up front. |
-| `cl_task_runs` | tae-portal | on, permissive | Append-only receipt ledger — one row per time a cadence task actually runs, actual cost + who/when. |
 | `notification_queue` | tae-portal | on, permissive | Outbound notification jobs. |
 | `notification_subscriptions` | tae-portal | on, permissive | Notification subscriptions. |
 | `feed_views` | tae-portal | on, permissive | Read/seen tracking, minimal shape (`item_key`, `viewed_at`), no FK. |
 | `analyses` | tae-social-analyzer | on, permissive | Social analysis results. FK to `companies`. |
+
+### The `contextlayer` schema — now real, not just planned
+
+This audit originally recommended creating a `contextlayer` schema "once ContextLayer is actually being built" (see the long-term-structure section below) and left it uncreated. As of the `tae-contextlayer` repo shipping its first tools (2026-07-30 onward, per `TAE_ContextLayer.md`), it exists and is populated — a fourth app now shares this Supabase project, alongside tae-portal, tae-discovery, and tae-social-analyzer. All seven tables below are owned exclusively by `tae-contextlayer`; no other app reads or writes them directly — every access goes through the deployed MCP server's tools.
+
+| Table | RLS status | Purpose |
+|---|---|---|
+| `client_engagements` | on, permissive | What service a company actually bought — distinct from what Discovery recommended. |
+| `relationship_events` | on, permissive | Append-only lifecycle log: converted, engagement_started, renewed, upsold, paused, churned. |
+| `industry_aliases` | on, permissive | Maps raw Discovery industry text to a canonical reporting category. Open-ended, no fixed list. |
+| `brief_entries` | on, permissive | The living strategic brief — goals, audience, voice, positioning, history, priorities. Append-only, entries can supersede earlier ones. |
+| `account_owners` | on, permissive | Which TAE employee owns each client relationship. Ending an assignment sets `ended_at` rather than deleting it. |
+| `cl_tasks` | on, permissive | ContextLayer cadence task catalog (monthly/quarterly/yearly), added 2026-07-31. Cost estimate is a range, not a single figure. |
+| `cl_task_runs` | on, permissive | Append-only receipt ledger — one row per time a cadence task actually runs, actual cost + who/when. |
+
+**`cl_tasks`/`cl_task_runs` have a short, worth-recording history.** The first version put them in tae-portal's own `portal` schema with plain REST access — wrong owner, caught before shipping the UI, by re-reading `TAE_ContextLayer.md`'s own stated architecture (every ContextLayer action goes through the MCP server, tae-portal never touches this data directly). Dropped from `portal` and recreated correctly here, in `tae-contextlayer`'s own migration `015_cadence_tasks.sql`. See finding 5's fourth update, below, for the full account — including a second issue this surfaced.
 
 `session_context` and `session_summary` also exist as views — no longer `SECURITY DEFINER` (finding 2, fixed).
 
@@ -233,9 +253,9 @@ You said you want this to be able to get vast and complex beyond what you'd mana
 - ✅ **Phase 2:** 10 tables confirmed exclusive to tae-portal → `portal` schema (`tickets`, `ticket_replies`, `report_tabs`, `report_charts`, `report_datasets`, `client_features`, `published_assets`, `partner_resources`, `partner_files`, `feed_views`). ~74 call sites across 29 files.
 - ✅ **Phase 2b:** `notification_subscriptions`, `notification_queue`, `project_statuses` → `portal` too, even though tae-discovery also touches them (7 files across both repos updated). `analyses` deliberately left in `public` — it's really tae-social-analyzer's own table, doesn't cleanly fit any of the four planned schemas; left as its own future decision rather than forced somewhere it doesn't belong.
 - ✅ **Phase 3, the highest-risk one:** `companies`, `clients`, `partners`, `sessions`, `discovery_links` → `core` schema, moved as one unit rather than sub-phased further (too relationally intertwined for a partial move to reduce risk). 30 files in tae-portal — including all three auth routes — plus 3 in tae-discovery. Given `clients` holds the actual login system, this got extra verification before deploying: the exact login query simulated successfully via the API, both admin views confirmed still resolving a full cross-table join with zero code changes, and `increment_link_stat`'s RPC confirmed working after its search path was updated. tae-social-analyzer confirmed to have no direct references to any of these 5 tables.
-- A `contextlayer` schema will get created once ContextLayer is actually being built — deliberately not created speculatively now.
+- ✅ **`contextlayer` schema** — created 2026-07-30 when `tae-contextlayer` actually shipped its first tools, exactly on the schedule this recommendation called for ("once ContextLayer is actually being built," not speculatively before). 7 tables now live there — see its own section in the table inventory above.
 
-All four schemas (`core`, `discovery`, `portal`, and eventually `contextlayer`) now exist and hold real tables — "who owns what" is visible in the database itself, not just in this doc. What's *not* done yet: giving each app a Postgres role scoped to just the schemas it needs (today, all three apps still connect with credentials that can see everything) — a smaller, lower-urgency follow-up now that the harder table-move work is finished.
+All four schemas (`core`, `discovery`, `portal`, `contextlayer`) now exist and hold real tables — "who owns what" is visible in the database itself, not just in this doc. What's *not* done yet: giving each app a Postgres role scoped to just the schemas it needs (today, all four apps still connect with credentials that can see everything) — a smaller, lower-urgency follow-up now that the harder table-move work is finished.
 
 **Update, 2026-08-01 — a real gap in this migration's verification, found and fixed.** Phase 3's verification checked that every `.from('table')` call site got correctly schema-qualified (`.schema('core').from(...)`), but never checked **embedded/joined selects** — PostgREST's `select=...,companies(company_name)` syntax for pulling a related row inline. That syntax cannot resolve across schemas at all (confirmed directly against the live REST API: a schema-qualified embed hint like `core.companies(...)` isn't valid syntax either — PGRST100). Once `companies` moved to `core` while `tickets`/`report_tabs` (in `portal`) and `analyses` (still in `public`, per the Phase 2b note above) kept the old unqualified `companies(...)` embed, every one of those queries started silently failing (`PGRST200`, "no relationship found") — not a caching issue, `NOTIFY pgrst, 'reload schema'` doesn't fix it, it's a hard PostgREST limitation.
 
@@ -266,9 +286,9 @@ This changes the calculus, not just adds to it. [ContextLayer](../TAE_ContextLay
 2. ~~Resolve the two-auth-system question~~ — ✅ done, turned out to be a non-issue (finding 4).
 3. ~~Backfill migrations~~ — ✅ done (finding 5) — both repos' migration files now match live state. **Update 2026-07-27:** tae-portal's migration *discipline* is also now real, not just the snapshot — its remote migration history was repaired and three real migrations (005–007) have gone through `supabase db push` cleanly. tae-discovery still relies on manual dashboard edits backfilled after the fact; same recommendation applies there.
 4. ~~Schema namespacing~~ — ✅ done. All four phases complete; `core`/`discovery`/`portal` schemas live, code updated and verified in both repos.
-5. **Decide and document** — the ownership convention between tae-discovery and tae-portal. Not started.
+5. **Decide and document** — the ownership convention between tae-discovery, tae-portal, and tae-contextlayer (three repos sharing one project and one migration ledger, confirmed the hard way via finding 5's third and fourth updates). Not started.
 6. **Give each app a scoped Postgres role** — right now every app's credentials can technically see every schema; the schemas exist but access isn't segmented by them yet. Not started.
-7. **Then** — RLS tightening tied to the now-confirmed canonical auth system, then ContextLayer's schema (created when that project actually starts).
+7. ~~ContextLayer's schema~~ — ✅ done, 2026-07-30 (see the `contextlayer` schema section in the table inventory above). What's left in this line item now is just RLS tightening tied to the confirmed canonical auth system — not started.
 
 ## Open questions
 
