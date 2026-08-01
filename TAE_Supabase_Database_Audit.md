@@ -2,7 +2,7 @@
 
 # TAE Tools — Supabase Database Audit
 
-*CLI linked and cross-checked against the live database (project `zbwcyjhczzgowmjzgsim`, "TAE Tools", Postgres 17) via `supabase gen types` and `supabase db advisors` — Supabase's own security/performance linter. Everything below is confirmed against what's actually running, not inferred from files. Originally written July 23, 2026; updated July 27, 2026 (tae-portal migration discipline now actually working — see finding 5 update).*
+*CLI linked and cross-checked against the live database (project `zbwcyjhczzgowmjzgsim`, "TAE Tools", Postgres 17) via `supabase gen types` and `supabase db advisors` — Supabase's own security/performance linter. Everything below is confirmed against what's actually running, not inferred from files. Originally written July 23, 2026; updated July 27, 2026 (tae-portal migration discipline now actually working — see finding 5 update), then again July 27, 2026 (a real cross-repo migration-numbering collision surfaced and got fixed — see finding 5's second update).*
 
 ---
 
@@ -97,6 +97,10 @@ Fixed properly this time, not just patched: `supabase link`, then `supabase migr
 
 **A second, more serious instance surfaced in the same session — the two new tables from migration 005 (`client_resources`, `client_files`) had no RLS at all.** `create table` was written with no `enable row level security` and no policy — the exact class of gap finding 1 fixed for twelve other tables, reintroduced by a brand-new migration the same day. Not inferred: confirmed live by probing with the actual anon key before touching anything — an unauthenticated `POST` to `client_resources` with a real `company_id` succeeded (`201`, row created and immediately visible), proving both read and write were fully open to anyone holding the public anon key. Probe row deleted immediately after confirming. **Fixed** via `008_client_resources_files_rls.sql` — RLS enabled on both tables with the same `using(true)` permissive policy every other `portal.*` table currently uses; re-checked against `supabase db advisors` afterward, zero findings for either table. Net effect: both tables now sit at the same permissive-but-present posture as their siblings (`partner_resources`/`partner_files`), not fully open and not yet tightened — same caveat as everything else in this tier.
 
+**A third instance, same day, and this one is the "no ownership convention" gap turning into an active bug, not just a style critique.** tae-portal and tae-discovery are two separate git repos, each with their own `supabase/migrations` folder — but they `supabase link` to the *same* project, meaning there is exactly one `supabase_migrations.schema_migrations` ledger table shared between them. Both repos independently numbered their own migrations 001 upward, and both happened to reach `010` around the same time — tae-discovery's real `010_discovery_schema_pilot.sql` landed in the shared ledger first. When tae-portal's own (unrelated) `010_cl_cadence_tasks.sql` was pushed, `supabase db push` silently treated version `010` as already satisfied — no error, no new tables, the push just no-op'd. Caught immediately by checking for the new tables directly afterward rather than trusting the CLI's success output; `cl_tasks` didn't exist. **Fixed** two ways: (1) tae-portal's actual migration was renumbered to `020` — well clear of tae-discovery's current sequence — and pushed cleanly, confirmed live; (2) a small no-op placeholder file, `010_shared_ledger_placeholder_discovery_schema_pilot.sql`, was added to tae-portal's migrations folder purely so its local file list has an entry matching the shared ledger's `010` row — it makes no schema changes, it exists only so `supabase migration list` reads as consistent from tae-portal's side too.
+
+This is exactly the risk the "decide the ownership convention" recommendation (below, still unstarted) was written to prevent, now with a concrete failure mode attached: **any two repos sharing one Supabase project, numbering migrations independently, will eventually collide, and the collision fails silently rather than loudly.** Until an ownership convention exists, the safe habit is checking `supabase migration list` from whichever repo you're about to push from *before* trusting the push succeeded — and verifying the actual object exists afterward, not just reading "Finished supabase db push" as confirmation.
+
 ### 6. fri-marketing-redesign's key in public HTML — ✅ Fixed (separately, before this list)
 
 The F.R.I. marketing site was moved to its own Vercel project and rebuilt with no Supabase connection at all — verified directly against the live deployment. The `fri_comments` table itself was dropped from the database, not just disconnected. Resolved before the RLS work above even started.
@@ -174,7 +178,7 @@ erDiagram
 
 ## Full table inventory
 
-32 tables total. (`fri_comments` — listed in the original version of this audit — was dropped along with the fri-marketing anon-key fix, finding 6. `client_resources` and `client_files` added 2026-07-27, mirroring `partner_resources`/`partner_files` to give clients the same "From TAE" / internal-files capability partners already had.)
+34 tables total. (`fri_comments` — listed in the original version of this audit — was dropped along with the fri-marketing anon-key fix, finding 6. `client_resources` and `client_files` added 2026-07-27, mirroring `partner_resources`/`partner_files`. `cl_tasks` and `cl_task_runs` added 2026-07-27, the ContextLayer cadence-task cost tracker — see finding 5's third update for the migration-numbering collision that delayed them.)
 
 | Table | Owner (by evidence) | RLS status | Purpose |
 |---|---|---|---|
@@ -206,6 +210,8 @@ erDiagram
 | `partner_files` | tae-portal | on, permissive | Files on partner resources. |
 | `client_resources` | tae-portal | on, permissive | Client-facing resource library ("From TAE"), added 2026-07-27. Mirrors `partner_resources`. |
 | `client_files` | tae-portal | on, permissive | TAE-only internal files per client, added 2026-07-27. Mirrors `partner_files`. |
+| `cl_tasks` | tae-portal | on, permissive | ContextLayer cadence task catalog (monthly/quarterly/yearly), added 2026-07-27. Cost estimate range up front. |
+| `cl_task_runs` | tae-portal | on, permissive | Append-only receipt ledger — one row per time a cadence task actually runs, actual cost + who/when. |
 | `notification_queue` | tae-portal | on, permissive | Outbound notification jobs. |
 | `notification_subscriptions` | tae-portal | on, permissive | Notification subscriptions. |
 | `feed_views` | tae-portal | on, permissive | Read/seen tracking, minimal shape (`item_key`, `viewed_at`), no FK. |
