@@ -193,7 +193,7 @@ erDiagram
 
 ## Full table inventory
 
-39 tables total across four app-owned groups plus the two intelligence-only schemas already covered above. (`fri_comments` — listed in the original version of this audit — was dropped along with the fri-marketing anon-key fix, finding 6. `client_resources` and `client_files` added 2026-07-27, mirroring `partner_resources`/`partner_files`. The `contextlayer` schema — 7 tables, `tae-contextlayer`'s own — is new to this table since the last update; see its own section directly below.)
+39 tables total across four app-owned groups plus the two intelligence-only schemas already covered above. (`fri_comments` — listed in the original version of this audit — was dropped along with the fri-marketing anon-key fix, finding 6. `client_resources` and `client_files` added 2026-07-27, mirroring `partner_resources`/`partner_files`. The `contextlayer` schema — 8 tables, `tae-contextlayer`'s own — is new to this table since the last update; see its own section directly below.)
 
 | Table | Owner (by evidence) | RLS status | Purpose |
 |---|---|---|---|
@@ -215,7 +215,7 @@ erDiagram
 | `session_recommendations` | tae-discovery | on, permissive | Priority recommendations. |
 | `tickets` | tae-portal | read: public, write: `service_role` only | Support tickets, client- or partner-owned. |
 | `ticket_replies` | tae-portal | on, permissive | Thread replies. |
-| `report_tabs` | tae-portal | on, permissive | Dashboard report groupings. |
+| `report_tabs` | tae-portal | on, permissive | Dashboard report groupings — client-owned (`company_id` set), partner-owned (`partner_slug` set), or, added 2026-08-04, TAE-internal (both null — "internal" reports, created/edited from the TAE Dashboard's own Reports section, reusing the exact same pipeline). |
 | `report_datasets` | tae-portal | on, permissive | Data backing a report tab. |
 | `report_charts` | tae-portal | on, permissive | Chart configs. |
 | `project_statuses` | tae-portal | on, permissive | Project/campaign status per client. |
@@ -232,7 +232,7 @@ erDiagram
 
 ### The `contextlayer` schema — now real, not just planned
 
-This audit originally recommended creating a `contextlayer` schema "once ContextLayer is actually being built" (see the long-term-structure section below) and left it uncreated. As of the `tae-contextlayer` repo shipping its first tools (2026-07-30 onward, per `TAE_ContextLayer.md`), it exists and is populated — a fourth app now shares this Supabase project, alongside tae-portal, tae-discovery, and tae-social-analyzer. All seven tables below are owned exclusively by `tae-contextlayer`; no other app reads or writes them directly — every access goes through the deployed MCP server's tools.
+This audit originally recommended creating a `contextlayer` schema "once ContextLayer is actually being built" (see the long-term-structure section below) and left it uncreated. As of the `tae-contextlayer` repo shipping its first tools (2026-07-30 onward, per `TAE_ContextLayer.md`), it exists and is populated — a fourth app now shares this Supabase project, alongside tae-portal, tae-discovery, and tae-social-analyzer. All eight tables below are owned exclusively by `tae-contextlayer`; no other app reads or writes them directly — every access goes through the deployed MCP server's tools.
 
 | Table | RLS status | Purpose |
 |---|---|---|
@@ -243,6 +243,7 @@ This audit originally recommended creating a `contextlayer` schema "once Context
 | `account_owners` | on, permissive | Which TAE employee owns each client relationship. Ending an assignment sets `ended_at` rather than deleting it. |
 | `cl_tasks` | on, permissive | ContextLayer cadence task catalog — daily/weekly/monthly/quarterly/yearly/future, expanded from the original 3 buckets 2026-08-04. Cost estimate is a range, not a single figure (null for `future` tasks, which have no cost estimate yet). |
 | `cl_task_runs` | on, permissive | Append-only receipt ledger — one row per time a cadence task actually runs, actual cost + who/when. |
+| `cl_reports` | on, permissive | Added 2026-08-04. Append-only log of real reports ContextLayer has produced — title, summary, optional full body, optional link back to the cadence task that produced it (`source_task_id`) and/or an external doc (`source_url`). Lightweight by design: a record that something was produced and what it found, not the visual report itself — see "The Reporting Network" in `TAE_ContextLayer.md` for how this relates to `report_tabs`. |
 
 **`cl_tasks`/`cl_task_runs` have a short, worth-recording history.** The first version put them in tae-portal's own `portal` schema with plain REST access — wrong owner, caught before shipping the UI, by re-reading `TAE_ContextLayer.md`'s own stated architecture (every ContextLayer action goes through the MCP server, tae-portal never touches this data directly). Dropped from `portal` and recreated correctly here, in `tae-contextlayer`'s own migration `015_cadence_tasks.sql`. See finding 5's fourth update, below, for the full account — including a second issue this surfaced.
 
@@ -264,7 +265,7 @@ You said you want this to be able to get vast and complex beyond what you'd mana
 - ✅ **Phase 2:** 10 tables confirmed exclusive to tae-portal → `portal` schema (`tickets`, `ticket_replies`, `report_tabs`, `report_charts`, `report_datasets`, `client_features`, `published_assets`, `partner_resources`, `partner_files`, `feed_views`). ~74 call sites across 29 files.
 - ✅ **Phase 2b:** `notification_subscriptions`, `notification_queue`, `project_statuses` → `portal` too, even though tae-discovery also touches them (7 files across both repos updated). `analyses` deliberately left in `public` — it's really tae-social-analyzer's own table, doesn't cleanly fit any of the four planned schemas; left as its own future decision rather than forced somewhere it doesn't belong.
 - ✅ **Phase 3, the highest-risk one:** `companies`, `clients`, `partners`, `sessions`, `discovery_links` → `core` schema, moved as one unit rather than sub-phased further (too relationally intertwined for a partial move to reduce risk). 30 files in tae-portal — including all three auth routes — plus 3 in tae-discovery. Given `clients` holds the actual login system, this got extra verification before deploying: the exact login query simulated successfully via the API, both admin views confirmed still resolving a full cross-table join with zero code changes, and `increment_link_stat`'s RPC confirmed working after its search path was updated. tae-social-analyzer confirmed to have no direct references to any of these 5 tables.
-- ✅ **`contextlayer` schema** — created 2026-07-30 when `tae-contextlayer` actually shipped its first tools, exactly on the schedule this recommendation called for ("once ContextLayer is actually being built," not speculatively before). 7 tables now live there — see its own section in the table inventory above.
+- ✅ **`contextlayer` schema** — created 2026-07-30 when `tae-contextlayer` actually shipped its first tools, exactly on the schedule this recommendation called for ("once ContextLayer is actually being built," not speculatively before). 8 tables now live there — see its own section in the table inventory above.
 
 All four schemas (`core`, `discovery`, `portal`, `contextlayer`) now exist and hold real tables — "who owns what" is visible in the database itself, not just in this doc. What's *not* done yet: giving each app a Postgres role scoped to just the schemas it needs (today, all four apps still connect with credentials that can see everything) — a smaller, lower-urgency follow-up now that the harder table-move work is finished.
 
