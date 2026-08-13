@@ -677,8 +677,35 @@ Building ContextLayer is a project; running it is a practice. The roadmap above 
 - **Re-test the escape hatches.** Once a year, actually exercise the fallbacks: prove the provider swap still works, prove a backup restores, prove recovery is hours not weeks. A fallback plan untested is a fallback plan unproven.
 - **Watch the cost line.** Token spend per client drifts as usage grows. Monitor it, keep model tiering and caching honest, and adjust per-tier prompt caps before a heavy user quietly erodes margin.
 
+## 15 — SEO & GEO — The Website-Section Build Checklist
+
+Added 2026-08-13, after reviewing the Website section's current SEO surface area against current SEO and GEO (generative engine optimization — how well a site gets found and cited by AI answer engines, not just traditional search) best practices. Ordered by what unblocks what, not by ease — foundational measurement first, then the additions currently missing entirely, then the architecture change that makes the rest maintainable. Each item is its own build session, tackled one at a time; check off as it ships, same discipline as everything else in this doc.
+
+### Foundation — do these first; nothing below is measurable without them
+- [ ] **Connect Google Search Console.** Today the only traffic data source is Vercel Web Analytics — there is no ranking data at all. Without this, none of the SEO work below can be verified as actually working.
+- [ ] **Fix `generate_sitemap_robots`'s crawl depth.** It currently only follows links found on the homepage — fine for F.R.I. (one page), silently incomplete for any real multi-page site. Fix this before onboarding a second Website-section client, not after it breaks on one.
+
+### SEO — completely absent from every client site today
+- [ ] **Meta description + canonical tag.** Zero exist right now; F.R.I.'s `<head>` has only charset/viewport/title.
+- [ ] **Open Graph + Twitter Card tags** (title/description/image) — controls how a shared link looks everywhere it gets pasted.
+- [ ] **JSON-LD structured data** — `Organization` + `LocalBusiness` (or a more specific subtype), covering NAP (name/address/phone) consistency, hours, services. The highest-leverage, lowest-effort item on this list — and it feeds GEO directly, see below.
+
+### GEO — one checklist bullet on an internal task list today, zero code
+- [ ] **`generate_llms_txt` tool.** Doesn't exist as a concept anywhere in the system yet. A curated plain-text file at the site root pointing AI crawlers at the cleanest, most important content — same category as sitemap.xml, but written for language models, not search crawlers.
+- [ ] **Make the AI-crawler policy in robots.txt an explicit, documented choice, not an accident.** Today's blanket `Allow: /` already permits GPTBot/ClaudeBot/PerplexityBot/Google-Extended, which is good — but it's incidental, not a decision. Worth surfacing as a real per-client choice, since some clients may want to block AI training crawlers while still allowing citation ones.
+- [ ] **Content-structure guidelines, not tooling** — direct-answer-first sections, FAQ-formatted content, question-phrased headings. A copywriting pattern for future site builds, not something ContextLayer can automate — worth writing down once, here or in its own doc, so it gets applied consistently rather than reinvented per client.
+
+### Performance — no monitoring exists at all today
+- [ ] **`get_site_performance` tool, backed by the Google PageSpeed Insights API.** `get_site_uptime` only checks up/down + latency — nothing measures LCP/INP/CLS. PageSpeed Insights is free (no per-event cost, unlike Vercel Speed Insights) and returns real Google-ranking-relevant CrUX field data, tying directly back into the SEO items above.
+
+### Architecture — the change that makes the rest maintainable long-term
+- [ ] **Extend `site_content_fields` with a third `category`: `seo`**, alongside today's `content`/`brand`. Meta description, OG image, and similar fields should become editable through the same field convention once the content editor UI is unparked — not a bespoke system bolted on separately.
+- [ ] **A new write path for `<head>` injection.** `update_site_content` today can only edit values *inside existing elements* — it has no mechanism to add new tags (`<meta>`, `<script type="application/ld+json">`) to `<head>`. Meta tags and JSON-LD both need this to exist before either can ship.
+
+*Everything above stays manual/click-triggered, consistent with the standing no-autopilot rule — none of this should become a cron job before TAE is out of beta.*
+
 ---
 
 > The market will build tools that execute. TAE is building something that understands. That is not a head start. That is a different category entirely — and it gets more defensible every month.
 
-*The Artist Evolution — ContextLayer — originally June 2026, updated July 24, 2026.*
+*The Artist Evolution — ContextLayer — originally June 2026, updated August 13, 2026.*
