@@ -683,7 +683,7 @@ Added 2026-08-13, after reviewing the Website section's current SEO surface area
 
 ### Foundation — do these first; nothing below is measurable without them
 - [ ] **Connect Google Search Console.** Today the only traffic data source is Vercel Web Analytics — there is no ranking data at all. Without this, none of the SEO work below can be verified as actually working.
-- [ ] **Fix `generate_sitemap_robots`'s crawl depth.** It currently only follows links found on the homepage — fine for F.R.I. (one page), silently incomplete for any real multi-page site. Fix this before onboarding a second Website-section client, not after it breaks on one.
+- [x] **Fix `generate_sitemap_robots`'s crawl depth.** Done 2026-08-13 — now a bounded breadth-first crawl (50 pages) following every discovered internal page's own links in turn, not homepage-only, and skipping asset extensions (images/PDF/CSS/JS) so only real pages get listed. Verified against F.R.I.'s live site (unchanged, still 1 URL — correct for a single-page site) plus synthetic multi-page and 60-page fixtures before deploy. Live in production, `tae-contextlayer` commit `6eb1167`.
 
 ### SEO — completely absent from every client site today
 - [ ] **Meta description + canonical tag.** Zero exist right now; F.R.I.'s `<head>` has only charset/viewport/title.
