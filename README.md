@@ -19,9 +19,21 @@ this repo is for things that describe the whole system.
   lives in tae-discovery, but Section 4 (managing entries, the link
   generator) is entirely about the TAE Portal's admin UI. That's why it's
   here rather than filed inside tae-discovery alone.
+- **TAE_Site_Field_Convention.md** — the build-time convention (`data-tae-field`
+  attributes, `scan_site_fields`) for making a new client site work with
+  ContextLayer's content/brand/SEO editing from day one, instead of needing
+  hand-written regex per client the way F.R.I.'s site does. Cross-tool: the
+  convention lives in `tae-contextlayer`'s code, but it's a rule for how any
+  future client site (built anywhere) should be structured.
+- **TAE_GEO_Content_Guidelines.md** — a copywriting pattern for future client
+  sites (lead with the answer, question-phrased headings, self-contained
+  sentences) so pages read well for both search engines and AI answer
+  engines. Not tool-specific — a writing discipline, not code.
 
-All four are meant to stay current, not be one-time snapshots — update them
+All six are meant to stay current, not be one-time snapshots — update them
 directly rather than starting the investigation over next time something
-changes. Each has a matching card in the TAE Toolbox (bottom of the TAE
-Dashboard admin page) linking straight to its file here on GitHub, so the
-card always shows whatever's actually committed.
+changes. Each of the original four has a matching card in the TAE Toolbox
+(bottom of the TAE Dashboard admin page) linking straight to its file here
+on GitHub, so the card always shows whatever's actually committed — the two
+newest additions don't have cards yet, worth adding next time someone's in
+that part of the dashboard.
