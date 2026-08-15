@@ -2,7 +2,7 @@
 
 # TAE Tools — Full Setup Reference
 
-*A plain-language map of every tool, where it lives, and how it stays updated — so we can organize, fix, or move things later without guessing or breaking what already works. Last updated August 13, 2026.*
+*A plain-language map of every tool, where it lives, and how it stays updated — so we can organize, fix, or move things later without guessing or breaking what already works. Last updated August 15, 2026.*
 
 ---
 
@@ -17,6 +17,7 @@ A few words show up over and over below. Here's what they actually mean, once, s
 - **"Git push → auto-deploy"** — the good pattern: save a change, run one command, and Vercel updates the live site by itself within a minute or two.
 - **"Manual deploy"** — the fragile pattern: editing the code does *nothing* to the live site until someone specifically runs a deploy command from that exact folder. Easy to forget, easy to lose track of what's actually live.
 - **Database (Supabase)** — where the shared, structured data lives (client records, tickets, reports, etc.) for several tools at once. Covered in its own document — link below — this one only says which tools use it.
+- **Connector** — a way of linking an outside account (like Figma or Supabase) directly into a Claude session, so it can pull real data instead of guessing. Turning one "on" in claude.ai's Settings → Connectors doesn't always mean it's usable right away — see below.
 
 ---
 
@@ -119,6 +120,7 @@ Was a one-off test of building a site from a PSD design with Claude Code — nev
 
 - **Two different GitHub homes exist:** most tools live under `github.com/taemarketing`; `tae-twin` lives under `github.com/The-Artist-Evolution`. If something's missing from where you expect, check the other one.
 - **The Vercel connection available in Claude sessions can only see one project** (`tae-social-analyzer`) even though the others share the same Vercel team. It's a working connection, just scoped narrowly — so I can't check on tae-portal, tae-discovery, the Dono Dashboard, ACS Dashboard, or TAE Twin's live status through that tool the way I can for Social Analyzer. The Vercel dashboard itself always has the full picture.
+- **Figma and Supabase connectors confirmed live in Claude sessions, 2026-08-15** — verified with real calls, not just a "Connected" checkmark: Figma's `whoami` returned the real account (handle TAE, info's team), Supabase's `list_projects` returned the real `TAE Tools` project. Worth knowing: after connecting one in claude.ai's Settings → Connectors, it can take up to ~15 minutes before it's actually usable as a tool in a session — no reconnect or fresh session needed, just a bit of a wait.
 - **Every tool now has a git repo, a GitHub backup, and auto-deploy set up.** (Apex site, previously the one exception, was a test project that's no longer needed and has been removed entirely — see above.)
 - **The shared database** (used by TAE Dashboard, TAE Discovery, and Social Analyzer) has its own detailed writeup, including some security gaps that are confirmed but not yet fixed: [TAE Tools — Supabase Database Audit](https://claude.ai/code/artifact/ad0fc3af-4fa3-40c3-926b-efdfe7de5f34) and the follow-up findings doc in memory.
 
