@@ -729,6 +729,25 @@ Added 2026-08-13, after reviewing the Website section's current SEO surface area
 
 *Everything above stays manual/click-triggered, consistent with the standing no-autopilot rule — none of this should become a cron job before TAE is out of beta.*
 
+### Status Update — August 15, 2026: the Client & Sales Relationships bucket, 7 tools shipped
+
+Same pattern as the two prior bucket passes: audit the real schema first (`list_tables` against `core`/`portal`/`discovery`/`contextlayer`), then group the 14 tasks by their actual shared blocker rather than treat each as its own build. Result: 7 buildable now with data that already existed unused, 2 blocked on a habit rather than a build (the tables exist, nobody writes to them yet), 2 blocked on a data source that doesn't exist anywhere in the system, 2 partial/weak-signal.
+
+- ✅ **7 tools shipped, all roster-wide (no `company_name` needed), all verified live against real production data — `tae-contextlayer` commit `1e2fa06`:**
+  - `get_client_roster_health` — flags active clients with portal access but zero logins, and companies carrying an open ticket. Closes **Client Roster Health Check**.
+  - `get_client_activity_digest` — new tickets, published report tabs, published assets across the roster in a window. Closes **Client Activity Digest**.
+  - `get_client_appreciation_list` — alphabetical active-client roster with contact + account owner. Closes **Year-End Client Appreciation Touch**. Honest gap stated in the tool's own output: no "client since" date exists anywhere — `contextlayer.client_engagements`, the table built for exactly this, has zero rows — so it can't be sorted by tenure, only listed.
+  - `get_stale_leads` — discovery sessions stuck `in_progress` with no update in 14+ days (configurable). Closes **Stale Lead Follow-Up Sweep**.
+  - `get_dormant_prospects` — companies still marked `prospect` untouched in 90+ days (configurable). Closes **Dormant Prospect Re-Engagement Draft**. States its real limitation directly: freshness is the company record's own `updated_at`, not cross-referenced against session activity, because anonymous/lead-magnet sessions aren't reliably linked to a company row.
+  - `get_lead_scoring` — ranks the 50 most recently completed discovery sessions by urgency level then average MIS score, pulling real data from `discovery.session_mis_scores`/`session_budget_signals`/`session_urgency_flags` that already existed (60/10/10 rows respectively) but had no tool surfacing it. Closes **Lead Scoring & Prioritization Pass**.
+  - `get_partner_pipeline` — per-partner clicks/starts/completions/clients-generated from `core.discovery_links` and `core.clients`. Closes **Referral & Partner Pipeline Check**. Live numbers: Omni Strategy Group (36 clicks, 2/2 start-to-completion, 4 clients generated), Infinity Blue (0 activity so far — an honest zero, not an error).
+  - All 7 verified with a direct MCP call against production, not just a clean `tsc`/deploy — one real finding from that pass: `clientCount: 0` across every active company in `get_client_roster_health`, because zero `core.clients` rows currently have `role = 'client_user'` — consistent with client-portal auth being explicitly deferred to Monday's Google Cloud session, not a bug in the new tool.
+  - `tae-portal` proxy routes added for all 7 (`app/api/admin/contextlayer/{client-roster-health,client-activity-digest,client-appreciation-list,stale-leads,dormant-prospects,lead-scoring,partner-pipeline}`), commit `ebb6065`. `READY_CADENCE_TASKS` updated, commit `086df86`.
+- **Blocked on a habit, not a build:** Churn Risk & Cross-Sell Review and Win/Loss Review both have real tables purpose-built for them — `contextlayer.client_engagements` (service/status/started_at/ended_at) and `relationship_events` (converted/renewed/upsold/paused/churned + reason + note) — with **zero rows in either**. The retrieval side is trivial once populated; what's missing is a lightweight entry point for someone to actually log an event when it happens. Not attempted today — a genuinely different kind of small build (a form, not a query) from the rest of this bucket.
+- **Genuinely blocked, no data source anywhere in Supabase:** Contract & Retainer Renewal Audit (no contract $/renewal-date data lives in the database at all — presumably Basecamp or manual records) and Proposal/Quote Follow-Up Check (no proposal/quote tracking exists anywhere, would need a new table built from scratch).
+- **Partial/weak signal, not attempted today:** Case Study & Renewal Talking Points Draft (could draft off site analytics + `brief_entries`, but no dedicated "wins/results" repo to pull proof points from) and Client Onboarding Process Review (no onboarding-stage tracker; `access_requests` is the only, weak, proxy signal).
+- **Partner Performance Review** was already Ready from an earlier pass — unaffected by today's work.
+
 ---
 
 > The market will build tools that execute. TAE is building something that understands. That is not a head start. That is a different category entirely — and it gets more defensible every month.
