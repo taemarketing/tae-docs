@@ -761,6 +761,15 @@ Confirmed via a fresh schema check: **no cost or token-spend tracking exists any
 - **Not attempted — blocked on a habit, not a build:** Deliverable & Deadline Tracker (`portal.project_statuses` exists for exactly this, zero rows — same pattern as Churn Risk/Win-Loss).
 - **Not attempted — not real tool-shaped work:** Annual Fire Drill, AI Provider Swap Test, and Institutional Knowledge Base Refresh are procedural/human-judgment exercises, not queries. Annual Security Review and Inter-Client Playbook Review are partial/weak-signal (Supabase advisors + the domain/credential sweep cover some of Security Review; `discovery.session_recommendations` reflects what TAE recommended to *prospects*, not what's actually running for existing clients, so it's a weak proxy for Playbook Review). Ticket & Response-Time Report is schema-ready (`portal.tickets` + `ticket_replies`) but `ticket_replies` has zero rows today — worth confirming staff replies are actually flowing through the portal before building a report that would come back empty.
 
+### Status Update — August 15, 2026 (continued): 3 new registry entries anticipating Monday's client-auth rollout
+
+With client dashboard auth going live Monday, `core.clients.login_count` and `portal.feed_views` are about to go from structurally-real-but-empty to actually meaningful. Added 3 new `client_sales_relationships` cadence tasks to `contextlayer.cl_tasks` for capability that's genuinely buildable today but would return trivial/empty results until real accounts exist — registry entries only, no tools built yet, each honest about that gap in its own description:
+- **Client Portal Adoption & Engagement Report** — roster-wide login activity and feature usage trending over time, the forward-looking companion to `get_client_roster_health`'s point-in-time snapshot.
+- **New Client Activation Check** — flags `portal_enabled` clients who haven't completed a first login within N days of being granted access.
+- **Portal Feature Adoption / Upsell Signal Audit** — cross-references `portal.client_features` enabled per client against actual `feed_views` usage; an enabled-but-unused feature is either a training gap or a genuine disinterest signal.
+
+**One idea considered and deliberately not added:** a "dormant portal user" / login-anomaly task (someone who logged in regularly then went quiet — an early churn signal). Not buildable with today's schema — `core.clients` only tracks a running `login_count`, not a `last_login_at` timestamp, so there's no way to distinguish recent silence from old activity. Would need a small migration (one nullable timestamp column, set on each successful login) before this is a real task rather than a wishlist item. Flagged here rather than added to the registry as "Blocked," since the blocker is a specific, well-understood schema gap rather than a vague TBD.
+
 ---
 
 > The market will build tools that execute. TAE is building something that understands. That is not a head start. That is a different category entirely — and it gets more defensible every month.
