@@ -748,6 +748,19 @@ Same pattern as the two prior bucket passes: audit the real schema first (`list_
 - **Partial/weak signal, not attempted today:** Case Study & Renewal Talking Points Draft (could draft off site analytics + `brief_entries`, but no dedicated "wins/results" repo to pull proof points from) and Client Onboarding Process Review (no onboarding-stage tracker; `access_requests` is the only, weak, proxy signal).
 - **Partner Performance Review** was already Ready from an earlier pass — unaffected by today's work.
 
+### Status Update — August 15, 2026 (continued): Finance & Cost Oversight + Internal Ops & Quality, 3 more tools shipped
+
+Confirmed via a fresh schema check: **no cost or token-spend tracking exists anywhere in Supabase** — no Anthropic usage table, no ad-spend table. The closest thing, `cl_task_runs.actual_cost`, is a manual per-run dollar field with zero rows, and even populated it's TAE's own labor-cost logging, not token spend. That ruled out 3 of the 4 Finance & Cost tasks outright.
+
+- ✅ **3 tools shipped, all roster-wide, all verified live — `tae-contextlayer` commit `2ba10d2`:**
+  - `get_weekly_budget_signal_check` — discovery sessions in a window with real budget-confidence signals and MIS scores. Closes **Weekly Budget & MIS Signal Check**. States plainly in its own output that this is lead-quality data, not a TAE spend report. Live check: 0 sessions in the last 7 days — an honest empty window, not an error.
+  - `get_brief_completeness_sweep` — checks every active client's brief against the 6 defined categories, flags gaps. Closes **Roster-Wide Brief Completeness Sweep**. **Real finding worth acting on:** only 1 of 7 active clients (Harvey Vogel) has *any* brief category filled in — the other 6 are completely empty. This isn't a tooling gap, it's an actual operational gap the sweep just surfaced.
+  - `get_domain_credential_audit` — reuses the same real Vercel APIs already behind `get_dns_domain_status`/`get_env_vars_redacted`, run across the whole roster: domain verification + stale env vars (default 180-day threshold). Closes **Domain and Credential Audit**. Live check: only F.R.I. Marketing has a Vercel project mapped today (verified, 0 stale vars) — every other active company has no `site_analytics_sources` row yet, correctly reported as "unmapped" rather than silently skipped.
+  - `tae-portal` proxy routes: commit `18daed0`. `READY_CADENCE_TASKS` updated: commit `636a273`.
+- **Not attempted — blocked on missing data:** Full Cost/Margin Review and Monthly Cost & Token Spend Check (no cost/revenue/token data anywhere in the system) and Holiday Ad Spend Pacing Check (needs Google Ads/Meta Ads access, same OAuth layer already deferred to Monday).
+- **Not attempted — blocked on a habit, not a build:** Deliverable & Deadline Tracker (`portal.project_statuses` exists for exactly this, zero rows — same pattern as Churn Risk/Win-Loss).
+- **Not attempted — not real tool-shaped work:** Annual Fire Drill, AI Provider Swap Test, and Institutional Knowledge Base Refresh are procedural/human-judgment exercises, not queries. Annual Security Review and Inter-Client Playbook Review are partial/weak-signal (Supabase advisors + the domain/credential sweep cover some of Security Review; `discovery.session_recommendations` reflects what TAE recommended to *prospects*, not what's actually running for existing clients, so it's a weak proxy for Playbook Review). Ticket & Response-Time Report is schema-ready (`portal.tickets` + `ticket_replies`) but `ticket_replies` has zero rows today — worth confirming staff replies are actually flowing through the portal before building a report that would come back empty.
+
 ---
 
 > The market will build tools that execute. TAE is building something that understands. That is not a head start. That is a different category entirely — and it gets more defensible every month.
