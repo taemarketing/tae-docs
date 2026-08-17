@@ -770,8 +770,26 @@ With client dashboard auth going live Monday, `core.clients.login_count` and `po
 
 **One idea considered and deliberately not added:** a "dormant portal user" / login-anomaly task (someone who logged in regularly then went quiet — an early churn signal). Not buildable with today's schema — `core.clients` only tracks a running `login_count`, not a `last_login_at` timestamp, so there's no way to distinguish recent silence from old activity. Would need a small migration (one nullable timestamp column, set on each successful login) before this is a real task rather than a wishlist item. Flagged here rather than added to the registry as "Blocked," since the blocker is a specific, well-understood schema gap rather than a vague TBD.
 
+### Status Update — August 17, 2026: a real, verified data-accuracy bug found in `get_site_analytics` — fix deferred, not yet started
+
+A client asked why the Website section's traffic-breakdown bullets ("top page," "top referrer," etc.) looked like they were behind the headline visitor/pageview numbers. First answer given was wrong in one respect — confirmed all fields come from one parallel-fetched request, so there's no cross-field cache lag — but that wasn't the actual question worth answering, and turned out to be an incomplete diagnosis.
+
+**Verified directly against Vercel's newer unified metrics system (`vercel metrics vercel.analytics_pageview.count`, the same backend `vercel.com`'s own dashboard reads from) against F.R.I.'s real production data, 14-day window:**
+
+| Dimension | `get_site_analytics` reported | Real (`vercel metrics` / dashboard) |
+|---|---|---|
+| Homepage (`/`) | 27 | **36** |
+| Direct referrer | 24 | **32** |
+| Desktop | 16 | **24** |
+| US | 23 | **26** |
+| Total visitors (daily-summed) | 36 ✅ | 36 |
+
+Every dimensional breakdown undercounts — consistently, not randomly — while the daily-summed total (also computed by this same tool, from the same underlying API's `by=day` query) is exactly right. **Root cause, not yet fully confirmed:** `get_site_analytics` pulls its four breakdowns (`topPages`/`topReferrers`/`deviceBreakdown`/`topCountries`) from Vercel's older Web Analytics REST API (`v1/query/web-analytics/visits/aggregate`, `by=route`/`referrerHostname`/`deviceType`/`country`) — the working theory is that this older endpoint's dimensional/grouped queries materialize slower or less completely than both its own daily rollup and Vercel's newer real-time metrics pipeline, though this hasn't been proven by reading Vercel's own internals, only inferred from the consistent gap pattern above.
+
+**The real fix:** migrate the four breakdown queries to the newer metrics API (`vercel.analytics_pageview.count`, `-a unique/visitor_id`, `--group-by request_path`/`referrer_hostname`/`device_type`/`country`) — confirmed via CLI (`vercel metrics`) that this data is accurate and the right dimension names exist. **Not yet started** — needs confirming that endpoint is callable server-side with a plain bearer token (the way `VERCEL_API_TOKEN` already authenticates the old endpoint) rather than only via an interactive CLI login, before touching `get_site_analytics`'s code. Deliberately held for a dedicated session rather than rushed into today's work — direct instruction.
+
 ---
 
 > The market will build tools that execute. TAE is building something that understands. That is not a head start. That is a different category entirely — and it gets more defensible every month.
 
-*The Artist Evolution — ContextLayer — originally June 2026, updated August 13, 2026.*
+*The Artist Evolution — ContextLayer — originally June 2026, updated August 17, 2026.*
