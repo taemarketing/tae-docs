@@ -178,6 +178,12 @@ Borrowed directly from *The Cue* (`the-cue-card.md`'s "Consent Before Record" se
 
 ---
 
+## Status Update — August 19, 2026
+
+Work on ContextLayer, along with the TAE Dashboard and the other TAE AI tools it depends on, is currently paused. These are collaborative builds — they need regular access, credentials, and go/no-go decisions from TAE to keep moving — and that hasn't been happening at a pace that sustains steady progress. Rather than continue in a stop-and-start pattern, the work is on hold until there's a more consistent line of collaboration in place. Nothing above reflects a change in the underlying plan or its viability — everything documented in this file remains a solid foundation to pick back up when conditions allow.
+
+---
+
 ## 01 — The Problem With Generic AI
 
 Every major website platform — GoDaddy, Wix, Squarespace, Webflow — has already shipped or is actively building an AI that can edit your site, draft copy, swap images, add pages. More are arriving every quarter. They will all work. They will all get better. And none of them will know what you are actually trying to accomplish.

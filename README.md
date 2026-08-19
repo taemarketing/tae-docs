@@ -1,5 +1,18 @@
 # TAE Docs
 
+## Status (August 19, 2026)
+
+Active development on the TAE Dashboard and the other TAE AI tools described
+here (Discovery, ContextLayer, Social Analyzer) is currently paused. These
+are collaborative builds that depend on regular access and decisions from
+TAE to keep moving, and that hasn't been happening at a pace that sustains
+steady progress. Rather than continue in a stop-and-start pattern, the work
+is on hold until a more consistent line of collaboration is in place. The
+documentation below still reflects the system as it stands and remains the
+reference for picking work back up when conditions allow.
+
+---
+
 Reference documentation that spans more than one TAE tool — so it doesn't
 belong inside any single tool's own repo. Tool-specific docs (like
 tae-discovery's interview logic) stay in that tool's own `docs/` folder;
